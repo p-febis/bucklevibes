@@ -1,5 +1,7 @@
+import argparse
 import json
 import asyncio
+import os
 from typing import TypedDict, cast
 from ffmpeg.asyncio import FFmpeg
 
@@ -11,24 +13,28 @@ class ConfigV1(TypedDict):
     defines: dict[str, list[int] | None]
 
 
-def file_path_from_key_code(keycode: str):
-    hex_keycode = "%02x" % int(keycode)
-    file_name = f"{hex_keycode}-1.wav"
-    return f"wav/{file_name}"
+tool_config = {
+    "input_folder": ".",
+    "output_folder": "wav",
+}
 
 
 async def main():
-    with open("config.json") as file:
+    handle_arguments()
+    make_output_directory()
+
+    with open(resolve_input_path("config.json")) as file:
         config: ConfigV1 = cast(ConfigV1, json.load(file))
 
     print(f"Parsing {config['name']}...")
 
+    input_path = resolve_input_path(config["sound"])
     key_codes = config["defines"].keys()
 
     awaitables = []
 
     for keycode in key_codes:
-        file_path = file_path_from_key_code(keycode)
+        file_path = resolve_output_path(file_name_from_key_code(keycode))
 
         array = config["defines"][keycode]
         if array is None:
@@ -39,7 +45,7 @@ async def main():
         ffmpeg = (
             FFmpeg()
             .option("y")
-            .input(config["sound"], ss=start_time, t=duration)
+            .input(input_path, ss=start_time, t=duration)
             .output(file_path)
         )
 
@@ -47,6 +53,36 @@ async def main():
 
     await asyncio.gather(*awaitables)
     print("Finished, Enjoy!")
+
+
+def resolve_input_path(file_path: str):
+    return os.path.join(tool_config["input_folder"], file_path)
+
+
+def resolve_output_path(file_path: str):
+    return os.path.join(tool_config["output_folder"], file_path)
+
+
+def file_name_from_key_code(keycode: str):
+    hex_keycode = "%02x" % int(keycode)
+    return f"{hex_keycode}-1.wav"
+
+
+def handle_arguments():
+    parser = argparse.ArgumentParser(prog="python3 main.py")
+    parser.add_argument("-i", "--input", help="Set the input folder")
+    parser.add_argument("-o", "--output", help="Set the output folder")
+    arguments = parser.parse_args()
+
+    if arguments.input:
+        tool_config["input_folder"] = str(arguments.input)
+
+    if arguments.output:
+        tool_config["output_folder"] = str(arguments.output)
+
+
+def make_output_directory():
+    os.makedirs(resolve_output_path(""), exist_ok=True)
 
 
 asyncio.run(main())
