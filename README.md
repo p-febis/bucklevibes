@@ -1,8 +1,7 @@
 # BuckleVibes
 
 BuckleVibes is a simple Python script that converts soundpacks from MechVibes
-into a `wav` folder format compatible with the Buckle buckling spring
-keyboard sound simulator.
+into a `wav` folder format compatible with [bucklespring](https://github.com/zevv/bucklespring).
 
 Got a favorite MechVibes soundpack? Make it far faster using it with bucklespring.
 
