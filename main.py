@@ -10,7 +10,7 @@ class ConfigV1(TypedDict):
     id: str
     name: str
     sound: str
-    defines: dict[str, list[int] | None]
+    defines: dict[str, list[int] | str | None]
 
 
 tool_config = {
@@ -36,9 +36,21 @@ async def main():
     for keycode in key_codes:
         file_path = resolve_output_path(file_name_from_key_code(keycode))
 
-        array = config["defines"][keycode]
-        if array is None:
+        resource = config["defines"][keycode]
+        if resource is None:
             continue
+
+        if isinstance(resource, str):
+            awaitables.append(
+                FFmpeg()
+                .option("y")
+                .input(resolve_input_path(resource))
+                .output(file_path)
+                .execute()
+            )
+            continue
+
+        array = resource
 
         start_time, duration = int(array[0]) / 1000, int(array[1]) / 1000
 
